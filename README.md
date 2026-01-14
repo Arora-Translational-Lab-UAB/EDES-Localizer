@@ -23,8 +23,10 @@ A fully automated pipeline for localizing **end-diastolic (ED)** and **end-systo
 - [How to Run](#how-to-run)
   - [Supported Input Modes](#supported-input-modes)
   - [Crop Modes](#crop-modes)
-  - [Quick Start: EchoNet CSV + AVI](#quick-start-echonet-csv--avi)
-  - [Quick Start: UAB NPY + PKL](#quick-start-uab-npy--pkl)
+  - [Quick Start: Single AVI (Inference-only)](#quick-start-single-avi-inference-only)
+  - [Quick Start: Batch from Filename List (Inference-only)](#quick-start-batch-from-filename-list-inference-only)
+  - [Quick Start: EchoNet CSV + AVI (Labeled)](#quick-start-echonet-csv--avi-labeled)
+  - [Quick Start: UAB NPY + PKL (Labeled)](#quick-start-uab-npy--pkl-labeled)
   - [Column Mapping for PKL Tables](#column-mapping-for-pkl-tables)
   - [Batch Slicing](#batch-slicing)
 - [Outputs](#outputs)
@@ -160,17 +162,24 @@ python scripts/run_edvesv.py [args...]
 
 ## Supported Input Modes
 
-### 1) EchoNet-style CSV + AVI videos
-- `--dataset echonet_csv`
-- Requires:
-  - `--video_dir` (directory containing `.avi`)
-  - `--input_csv` with at least columns: `FileName,EDV,ESV`
+This repo supports **labeled evaluation** and **inference-only** workflows:
 
-### 2) UAB-style NPY arrays + PKL table
-- `--dataset uab_pkl`
-- Requires:
-  - `--npy_base_dir` (base directory for `.npy` files)
-  - `--input_pkl` (table containing file identifiers and ED/ES metadata)
+### Inference-only (no ED/ES required)
+- `--dataset single_avi`  
+  Run on a **single `.avi`** file and output predicted ED/ES frames.
+
+- `--dataset echonet_list`  
+  Run on a **batch of videos** specified by a **text file** of filenames (one per line).  
+  This is useful when you only have filenames and want predictions without any ED/ES labels.
+
+### Labeled evaluation (ED/ES provided)
+- `--dataset echonet_csv`  
+  AVI videos + a CSV that includes `FileName` (and optionally `EDV`, `ESV` for evaluation).
+
+- `--dataset uab_pkl`  
+  NPY arrays + a PKL table (column names can be mapped).
+
+> Note: `--output_csv` is always required. Even in inference-only mode, results are written to a CSV.
 
 ---
 
@@ -187,7 +196,41 @@ python scripts/run_edvesv.py [args...]
 
 ---
 
-## Quick Start: EchoNet CSV + AVI
+## Quick Start: Single AVI (Inference-only)
+
+```bash
+python scripts/run_edvesv.py   --dataset single_avi   --video_path /data/project/arora_lab_imaging/Dataset/Videos/0X4EFB94EA8F9FC7C2.avi   --crop_mode yolo   --yolo_weights /data/user/nk7/EigenValue_EDV_ESV/EchoNet-Dynamic2/UABWeight/best.pt   --output_csv out_single.csv
+```
+
+Optional: set a custom identifier for the output row:
+```bash
+python scripts/run_edvesv.py   --dataset single_avi   --video_path /path/to/video.avi   --case_id MyCase123   --crop_mode full   --output_csv out_single.csv
+```
+
+---
+
+## Quick Start: Batch from Filename List (Inference-only)
+
+Create a text file (e.g., `filelist.txt`) with **one filename per line** (with or without `.avi`).  
+Blank lines are ignored. Lines starting with `#` are treated as comments.
+
+Example `filelist.txt`:
+```
+# EchoNet examples
+0X4EFB94EA8F9FC7C2
+0X211D307253ACBEE7.avi
+0XD00B14807A0FA2B
+```
+
+Run:
+
+```bash
+python scripts/run_edvesv.py   --dataset echonet_list   --video_dir /data/project/arora_lab_imaging/Dataset/Videos   --file_list /path/to/filelist.txt   --crop_mode full   --output_csv out_batch.csv
+```
+
+---
+
+## Quick Start: EchoNet CSV + AVI (Labeled)
 
 ### 1) YOLO crop
 ```bash
@@ -209,7 +252,7 @@ python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /data/project
 
 ---
 
-## Quick Start: UAB NPY + PKL
+## Quick Start: UAB NPY + PKL (Labeled)
 
 ```bash
 python scripts/run_edvesv.py   --dataset uab_pkl   --npy_base_dir /data/project/arora_lab_imaging/C_NC_EF/RAW_Dataset   --input_pkl /data/project/arora_lab_imaging/final_LV_GT_log_with_array_v6.pkl   --yolo_weights /data/user/nk7/EigenValue_EDV_ESV/EchoNet-Dynamic2/UABWeight/best.pt   --crop_mode yolo   --output_csv UAB_RobutsPCA_All_v2.csv
@@ -242,6 +285,8 @@ To process only a subset of rows (useful for batching on HPC):
 python scripts/run_edvesv.py ... --start_idx 5000 --end_idx 7500
 ```
 
+> For `single_avi`, slicing is typically unnecessary.
+
 ---
 
 ## Outputs
@@ -253,7 +298,7 @@ Typical output includes:
 - predicted ED frame index
 - predicted ES frame index
 - crop mode and crop coordinates used (if applicable)
-- status flags (e.g., excluded due to single-cycle, YOLO failure fallback, etc.)
+- status flags (e.g., excluded due to single-cycle, YOLO failure fallback, read failure, etc.)
 
 > Exact column names depend on `scripts/run_edvesv.py`. If you paste your current output CSV header here, I can document each field precisely.
 
