@@ -1,4 +1,7 @@
-# ED/ES (EDV/ESV) Frame Localization with YOLO ROI + RobustPCA
+# A Novel Framework for End-Diastolic and End-Systolic Frame Localization in Contrast and Non-Contrast Echocardiography Without Manual Annotations  
+**Sahaj Patel, BS, MS, PhD; Neeraj Kummaragunta, BS; Krishin Yerabolu, N/A; Abdulla Shahid, BS; Priyank Baria, BSN; Cynthia Li, N/A; Nehal Vekariya, MS; Akhil Pampana, MS; Pankaj Arora, MD; Garima Arora, MD**  
+
+**Paper (AHA / Circulation Abstract 4373195):** https://www.ahajournals.org/doi/10.1161/circ.152.suppl_3.4373195
 
 A fully automated pipeline for localizing **end-diastolic (ED)** and **end-systolic (ES)** frames in echocardiography cine loops using **optional LV ROI detection (YOLO)** and **Robust PCA + SVD** motion signal extraction—**without requiring manually annotated ED/ES reference frames**.
 
