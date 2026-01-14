@@ -145,7 +145,7 @@ Typical structure:
 ## Installation
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 If you run on GPU, ensure a CUDA-enabled PyTorch build is installed.
