@@ -24,6 +24,52 @@ class RunConfig:
     rpca_max_iter: int = 1000
     rpca_tol: float = 1e-6
 
+
+
+def _parse_optional_int(x) -> int | None:
+    """Parse an int-like value. Returns None if missing/NaN/blank or sentinel (<0)."""
+    try:
+        if x is None:
+            return None
+        # pandas NaN
+        if isinstance(x, float) and np.isnan(x):
+            return None
+        s = str(x).strip()
+        if s == "" or s.lower() in {"nan", "none"}:
+            return None
+        v = int(float(s))
+        return None if v < 0 else v
+    except Exception:
+        return None
+
+
+def _pick_pred_from_signal(best_signal: np.ndarray, candidates: list[int]) -> tuple[float, float]:
+    """
+    Inference-only fallback when GT ED/ES is unavailable.
+    ED = candidate at max(best_signal), ES = candidate at min(best_signal).
+    Returns floats to allow NaN.
+    """
+    if best_signal.size == 0 or not candidates:
+        return float("nan"), float("nan")
+
+    cand = np.array(candidates, dtype=int)
+    cand = cand[(cand >= 0) & (cand < best_signal.shape[0])]
+    if cand.size == 0:
+        return float("nan"), float("nan")
+
+    vals = best_signal[cand]
+    ed = int(cand[int(np.argmax(vals))])
+    es = int(cand[int(np.argmin(vals))])
+
+    if ed == es and cand.size >= 2:
+        order = np.argsort(vals)
+        es = int(cand[int(order[0])])
+        ed = int(cand[int(order[-1])])
+        if ed == es:
+            ed = int(cand.max())
+            es = int(cand.min())
+
+    return float(ed), float(es)
 def _to_grayscale_sequence(frames: np.ndarray) -> np.ndarray:
     if frames.size == 0:
         return np.empty((0,))
@@ -72,8 +118,8 @@ def run_echonet_csv(
     records = []
     for idx, row in df.iterrows():
         filename = str(row["FileName"])
-        gt_edv = int(row["EDV"])
-        gt_esv = int(row["ESV"])
+        gt_edv = _parse_optional_int(row["EDV"]) if "EDV" in row else None
+        gt_esv = _parse_optional_int(row["ESV"]) if "ESV" in row else None
 
         video_path = os.path.join(video_dir, f"{filename}.avi")
         frames = load_video_frames(video_path)
@@ -81,17 +127,22 @@ def run_echonet_csv(
             continue
 
         crop_res = cropper.crop(frames)
-        _, candidates = process_sequence(crop_res.frames, cfg)
-        pred_edv, pred_esv = pick_ed_es_distinct(candidates, gt_edv, gt_esv)
+        best_signal, candidates = process_sequence(crop_res.frames, cfg)
+
+        if gt_edv is not None and gt_esv is not None:
+            pred_edv, pred_esv = pick_ed_es_distinct(candidates, gt_edv, gt_esv)
+        else:
+            pred_edv, pred_esv = _pick_pred_from_signal(best_signal, candidates)
 
         records.append({
             "FileName": filename,
-            "EDV": gt_edv,
+            "EDV": gt_edv if gt_edv is not None else "NA",
             "Pred EDV": pred_edv,
-            "ESV": gt_esv,
+            "ESV": gt_esv if gt_esv is not None else "NA",
             "Pred ESV": pred_esv,
-            "EDV Diff": abs(pred_edv - gt_edv) if not np.isnan(pred_edv) else "NA",
-            "ESV Diff": abs(pred_esv - gt_esv) if not np.isnan(pred_esv) else "NA",
+            "EDV Diff": (abs(pred_edv - gt_edv) if (gt_edv is not None and not np.isnan(pred_edv)) else "NA"),
+            "ESV Diff": (abs(pred_esv - gt_esv) if (gt_esv is not None and not np.isnan(pred_esv)) else "NA"),
+            "Has GT": (gt_edv is not None and gt_esv is not None),
         })
 
         if cfg.device == "cuda":
@@ -140,8 +191,8 @@ def run_uab_pkl(
     records = []
     for idx, row in df.iterrows():
         case_id = str(row[id_col])
-        gt_edv = int(row[ed_col])
-        gt_esv = int(row[es_col])
+        gt_edv = _parse_optional_int(row[ed_col])
+        gt_esv = _parse_optional_int(row[es_col])
 
         rel = str(row[npy_col])
         npy_path = rel if os.path.isabs(rel) else os.path.join(npy_base_dir, rel)
@@ -150,18 +201,23 @@ def run_uab_pkl(
             continue
 
         crop_res = cropper.crop(frames)
-        _, candidates = process_sequence(crop_res.frames, cfg)
-        pred_edv, pred_esv = pick_ed_es_distinct(candidates, gt_edv, gt_esv)
+        best_signal, candidates = process_sequence(crop_res.frames, cfg)
+
+        if gt_edv is not None and gt_esv is not None:
+            pred_edv, pred_esv = pick_ed_es_distinct(candidates, gt_edv, gt_esv)
+        else:
+            pred_edv, pred_esv = _pick_pred_from_signal(best_signal, candidates)
 
         records.append({
             "Case": case_id,
-            "EDV": gt_edv,
+            "EDV": gt_edv if gt_edv is not None else "NA",
             "Pred EDV": pred_edv,
-            "ESV": gt_esv,
+            "ESV": gt_esv if gt_esv is not None else "NA",
             "Pred ESV": pred_esv,
-            "EDV Diff": abs(pred_edv - gt_edv) if not np.isnan(pred_edv) else "NA",
-            "ESV Diff": abs(pred_esv - gt_esv) if not np.isnan(pred_esv) else "NA",
+            "EDV Diff": (abs(pred_edv - gt_edv) if (gt_edv is not None and not np.isnan(pred_edv)) else "NA"),
+            "ESV Diff": (abs(pred_esv - gt_esv) if (gt_esv is not None and not np.isnan(pred_esv)) else "NA"),
             "NPY": npy_path,
+            "Has GT": (gt_edv is not None and gt_esv is not None),
         })
 
         if cfg.device == "cuda":
