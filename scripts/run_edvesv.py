@@ -59,7 +59,11 @@ def _read_file_list(file_list_path: str) -> List[str]:
 def _write_temp_echonet_csv(file_names: List[str], out_path: Optional[str] = None) -> str:
     """
     Create a temporary EchoNet-style CSV with minimal required columns.
-    EDV/ESV are left blank since these modes are inference-only.
+
+    IMPORTANT:
+      Your current run_echonet_csv() expects EDV/ESV to be convertible to int.
+      For inference-only modes we write EDV/ESV = -1 as a sentinel (meaning "unknown")
+      so it won't crash on NaN/blank values.
     """
     if out_path is None:
         fd, tmp_path = tempfile.mkstemp(prefix="edvesv_filenames_", suffix=".csv")
@@ -70,7 +74,7 @@ def _write_temp_echonet_csv(file_names: List[str], out_path: Optional[str] = Non
         w = csv.writer(f)
         w.writerow(["FileName", "EDV", "ESV"])
         for fn in file_names:
-            w.writerow([fn, "", ""])
+            w.writerow([fn, -1, -1])
     return out_path
 
 
@@ -176,7 +180,7 @@ def main():
         print(f"Saved: {args.output_csv}")
         return
 
-    # Inference-only modes reuse run_echonet_csv by generating a temporary CSV with FileName + empty EDV/ESV.
+    # Inference-only modes reuse run_echonet_csv by generating a temporary CSV with FileName + EDV/ESV=-1.
     tmp_csv: Optional[str] = None
     try:
         if args.dataset == "single_avi":
