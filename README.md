@@ -144,6 +144,14 @@ Typical structure:
 
 ## Installation
 
+If your repo has a `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+If your repo is packaged (has `pyproject.toml` or `setup.py`):
+
 ```bash
 pip install -e .
 ```
@@ -199,7 +207,7 @@ This repo supports **labeled evaluation** and **inference-only** workflows:
 ## Quick Start: Single AVI (Inference-only)
 
 ```bash
-python scripts/run_edvesv.py   --dataset single_avi   --video_path /data/project/arora_lab_imaging/Dataset/Videos/0X4EFB94EA8F9FC7C2.avi   --crop_mode yolo   --yolo_weights /data/user/nk7/EigenValue_EDV_ESV/EchoNet-Dynamic2/UABWeight/best.pt   --output_csv out_single.csv
+python scripts/run_edvesv.py   --dataset single_avi   --video_path /path/to/video.avi   --crop_mode yolo   --yolo_weights /path/to/yolo_weights.pt   --output_csv out_single.csv
 ```
 
 Optional: set a custom identifier for the output row:
@@ -216,16 +224,16 @@ Blank lines are ignored. Lines starting with `#` are treated as comments.
 
 Example `filelist.txt`:
 ```
-# EchoNet examples
-0X4EFB94EA8F9FC7C2
-0X211D307253ACBEE7.avi
-0XD00B14807A0FA2B
+# Example filenames
+CASE_001
+CASE_002.avi
+CASE_003
 ```
 
 Run:
 
 ```bash
-python scripts/run_edvesv.py   --dataset echonet_list   --video_dir /data/project/arora_lab_imaging/Dataset/Videos   --file_list /path/to/filelist.txt   --crop_mode full   --output_csv out_batch.csv
+python scripts/run_edvesv.py   --dataset echonet_list   --video_dir /path/to/video_dir   --file_list /path/to/filelist.txt   --crop_mode full   --output_csv out_batch.csv
 ```
 
 ---
@@ -234,20 +242,20 @@ python scripts/run_edvesv.py   --dataset echonet_list   --video_dir /data/projec
 
 ### 1) YOLO crop
 ```bash
-python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /data/project/arora_lab_imaging/Dataset/Videos   --input_csv /data/project/arora_lab_imaging/edv_esv.csv   --yolo_weights /data/user/nk7/EigenValue_EDV_ESV/EchoNet-Dynamic2/UABWeight/best.pt   --crop_mode yolo   --output_csv out_yolo.csv
+python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /path/to/video_dir   --input_csv /path/to/labels.csv   --yolo_weights /path/to/yolo_weights.pt   --crop_mode yolo   --output_csv out_yolo.csv
 ```
 
 ### 2) Full-frame (no crop)
 ```bash
-python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /data/project/arora_lab_imaging/Dataset/Videos   --input_csv /data/project/arora_lab_imaging/edv_esv.csv   --crop_mode full   --output_csv out_full.csv
+python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /path/to/video_dir   --input_csv /path/to/labels.csv   --crop_mode full   --output_csv out_full.csv
 ```
 
 ### 3) Fixed crop
-Matches notebook constants:
+Replace with your experiment's constants:
 `X1,Y1,X2,Y2 = 24,14,88,94`
 
 ```bash
-python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /data/project/arora_lab_imaging/Dataset/Videos   --input_csv /data/project/arora_lab_imaging/edv_esv.csv   --crop_mode fixed   --fixed_crop 24 14 88 94   --output_csv out_fixed.csv
+python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /path/to/video_dir   --input_csv /path/to/labels.csv   --crop_mode fixed   --fixed_crop 24 14 88 94   --output_csv out_fixed.csv
 ```
 
 ---
@@ -255,7 +263,7 @@ python scripts/run_edvesv.py   --dataset echonet_csv   --video_dir /data/project
 ## Quick Start: UAB NPY + PKL (Labeled)
 
 ```bash
-python scripts/run_edvesv.py   --dataset uab_pkl   --npy_base_dir /data/project/arora_lab_imaging/C_NC_EF/RAW_Dataset   --input_pkl /data/project/arora_lab_imaging/final_LV_GT_log_with_array_v6.pkl   --yolo_weights /data/user/nk7/EigenValue_EDV_ESV/EchoNet-Dynamic2/UABWeight/best.pt   --crop_mode yolo   --output_csv UAB_RobutsPCA_All_v2.csv
+python scripts/run_edvesv.py   --dataset uab_pkl   --npy_base_dir /path/to/npy_base_dir   --input_pkl /path/to/table.pkl   --yolo_weights /path/to/yolo_weights.pt   --crop_mode yolo   --output_csv out_uab.csv
 ```
 
 ---
@@ -272,7 +280,7 @@ If your PKL column names differ, map them with:
 Example:
 
 ```bash
-python scripts/run_edvesv.py   --dataset uab_pkl   --input_pkl /path/to/table.pkl   --npy_base_dir /path/to/npy_base   --id_col PatientFolder   --ed_col ED   --es_col ES   --npy_col NPYRelPath   --crop_mode full   --output_csv out.csv
+python scripts/run_edvesv.py   --dataset uab_pkl   --input_pkl /path/to/table.pkl   --npy_base_dir /path/to/npy_base_dir   --id_col PatientFolder   --ed_col ED   --es_col ES   --npy_col NPYRelPath   --crop_mode full   --output_csv out.csv
 ```
 
 ---
@@ -299,8 +307,6 @@ Typical output includes:
 - predicted ES frame index
 - crop mode and crop coordinates used (if applicable)
 - status flags (e.g., excluded due to single-cycle, YOLO failure fallback, read failure, etc.)
-
-> Exact column names depend on `scripts/run_edvesv.py`. If you paste your current output CSV header here, I can document each field precisely.
 
 ---
 
